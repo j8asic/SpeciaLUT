@@ -46,10 +46,13 @@ namespace SpeciaLUT {
             return &FnStruct::template run< detail::unflatten<n_dims_>(i, I, {NS...})... >;
         }
 
-        static constexpr FnLUT ptrs_ = []<std::size_t... I>(std::index_sequence<I...>) -> FnLUT
+        template<std::size_t... I>
+        static constexpr FnLUT fn_make_lut(std::index_sequence<I...>)
         {
             return {(fn_ptr<I>(std::make_index_sequence<n_dims_>{}))...};
-        } (std::make_index_sequence<n_ptrs_>{});
+        }
+
+        static constexpr FnLUT ptrs_ = fn_make_lut(std::make_index_sequence<n_ptrs_>{});
 
     public:
 
