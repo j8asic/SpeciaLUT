@@ -39,7 +39,7 @@ struct Test
 
         while (loop_condition) {
 
-        	if constexpr (condition) {
+            if constexpr (condition) {
                 /* ... */
             } else {
                 /* ... */
@@ -54,10 +54,10 @@ struct Test
 };
 ```
 
-Make an instance of `Chooser` class, with template parameters that specify: the *struct*, *function signature*, *number of states* for each template parameter:
+Make an instance of `Chooser` class, with template parameters that specify: the *struct* containing a template `run` function, and *number of states* for each template parameter:
 
 ```cpp
-SpeciaLUT::Chooser<Test, void(double), 2, 3> test;
+SpeciaLUT::Chooser<Test, 2, 3> test;
 ```
 
 Find the optimal function based on the immutable run-time conditions (first brackets), pass other parameters and  execute the function (second brackets).

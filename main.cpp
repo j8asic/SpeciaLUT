@@ -10,10 +10,11 @@ struct Test
     }
 };
 
+
 int main()
 {
 
-    SpeciaLUT::Chooser<Test, void(const char*), 2, 2, 3, 2> test;
+    SpeciaLUT::Chooser<Test, 2, 2, 3, 2> test;
 
     int o = 0, l = 1, z = 2;
     test(o,o,z,l)("Hi");

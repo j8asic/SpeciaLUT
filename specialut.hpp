@@ -9,6 +9,12 @@ namespace SpeciaLUT {
     namespace detail
     {
 
+        template <auto F> struct Signature;
+        template <typename R, typename ... A, R (*F)(A...)>
+        struct Signature<F> {
+            using value = R(A...);
+        };
+
         template<std::size_t ND>
         int flat_offset(std::array<std::size_t, ND> ns, std::array<int, ND> is)
         {
@@ -30,7 +36,7 @@ namespace SpeciaLUT {
 
 
     /// Runtime choosing of specialized template functions
-    template <typename FnStruct, typename FnSignature, std::size_t... NS>
+    template <typename FnStruct, std::size_t... NS>
     class Chooser {
 
     private:
@@ -38,6 +44,7 @@ namespace SpeciaLUT {
         static constexpr std::size_t n_dims_ = sizeof...(NS);
         static constexpr std::size_t n_ptrs_ = (NS * ...);
 
+        using FnSignature = typename detail::Signature<FnStruct::template run<(NS*0)...>>::value;
         using FnLUT = std::array<FnSignature*, n_ptrs_>;
 
         template<int i, std::size_t... I>
@@ -47,12 +54,12 @@ namespace SpeciaLUT {
         }
 
         template<std::size_t... I>
-        static constexpr FnLUT fn_make_lut(std::index_sequence<I...>)
+        static constexpr FnLUT make_lut(std::index_sequence<I...>)
         {
             return {(fn_ptr<I>(std::make_index_sequence<n_dims_>{}))...};
         }
 
-        static constexpr FnLUT ptrs_ = fn_make_lut(std::make_index_sequence<n_ptrs_>{});
+        static constexpr FnLUT ptrs_ = make_lut(std::make_index_sequence<n_ptrs_>{});
 
     public:
 
