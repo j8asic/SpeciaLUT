@@ -5,8 +5,13 @@
 template<bool i, bool j, int k, bool l>
 void host_fn(const char* message)
 {
-    std::cout << "Compile-time specialization: (" << i << ", " << j << ", " << k << ", " << l
-              << "), run-time message: " << message << std::endl;
+    if constexpr (!l) {
+        std::cout << "Compile-time specialization: (" << i << ", " << j << ", " << k << ", " << l
+                  << "), and for this state I reject to print the message. " << std::endl;
+    } else {
+        std::cout << "Compile-time specialization: (" << i << ", " << j << ", " << k << ", " << l
+                  << "), run-time message: " << message << std::endl;
+    }
 }
 
 #ifdef USE_CUDA
@@ -24,25 +29,33 @@ int main()
 
     std::cout << "Simple test:" << std::endl;
 
-    FUNCTION_CHOOSER(host_fn, 2, 2, 3, 2) test;
+    SpeciaLUT::Chooser<TABULATE(host_fn), 2, 2, 3, 2> test;
+    // instead of the above, shorter macro can be used:
+    // CHOOSER(host_fn, 2, 2, 3, 2) test;
 
     int o = 0, l = 1, z = 2;
-    test(o, o, z, l)("Hi");
-    test(o, l, o, o)("this");
-    test(l, o, l, l)("is");
-    test(l, l, z, o)("test");
+    test(o, o, z, l)("Hello #1");
+    test(o, l, o, o)("Hey #2");
+    test(l, o, l, l)("Hi #3");
+    test(l, l, z, o)("Aloha #4");
 
 #ifdef USE_CUDA
 
     std::cout << "Now doing the CUDA test:" << std::endl;
 
-    CUDA_CHOOSER(cuda_fn, 2, 2, 3, 2) cuda_test;
+    SpeciaLUT::CudaChooser<TABULATE(cuda_fn), 2, 2, 3, 2> cuda_test;
+    // instead of the above, shorter macro can be used:
+    // CUDA_CHOOSER(cuda_fn, 2, 2, 3, 2) cuda_test;
 
+    // set grid size and block size for kernel execution
     cuda_test.prepare({ 1, 1, 1 }, { 1, 1, 1 });
     cuda_test(o, o, z, l)(1);
     cuda_test(o, l, o, o)(2);
     cuda_test(l, o, l, l)(3);
     cuda_test(l, l, z, o)(4);
+    // cuda_test(...) returns CudaChooser&
+    // so you can use cuda_test(...).prepare(...).launch()
+    // to change execution parameters for the specialization
 
     cudaDeviceSynchronize();
 #endif

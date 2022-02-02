@@ -54,13 +54,23 @@ void run(double some_param) {
 Make an instance of `Chooser` class using macro `FUNCTION_CHOOSER` that requires: the template function and *number of states* for each template parameter:
 
 ```cpp
-FUNCTION_CHOOSER(run, 2, 3) test;
+SpeciaLUT::Chooser<TABULATE(run), 2, 3> test;
+// or using a macro:
+CHOOSER(run, 2, 3) test;
 ```
 
-Find the optimal function based on the immutable run-time conditions (first brackets), pass other parameters and  execute the function (second brackets).
+Find the optimal function based on the run-time conditions (first brackets), pass other parameters and execute the function (second brackets).
 
 ```cpp
 test(runtime_bool, int_state)(double_parameter);
+```
+
+There is a construct for CUDA kernels as well (see `main.cpp` for an example), which is used as:
+
+```cpp
+SpeciaLUT::CudaChooser<TABULATE(some_cuda_kernel), 2, 3> test;
+// or using a macro:
+CUDA_CHOOSER(some_cuda_kernel, 2, 3) test;
 ```
 
 ## TESTED ON
