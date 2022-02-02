@@ -15,11 +15,11 @@ Therefore, the safest thing is that the non-used parts of the code are not even 
 
 ## How to use it
 
-**Requirements**: C++20 compiler.
+**Requirements**: C++20 compiler (enabled with `-std=c++20`)
 
-**Test**: Run CMake or open the project in an IDE.
+**Test**: Run CMake as usual, or open the project in an IDE.
 
-**Usage**: Copy `specialut.hpp` into your project and include it.
+**Set up**: Copy `specialut.hpp` into your project and include it.
 
 **Example**:
 
@@ -62,6 +62,11 @@ Find the optimal function based on the immutable run-time conditions (first brac
 ```cpp
 test(runtime_bool, int_state)(double_parameter);
 ```
+
+## TESTED ON
+
+- Clang >= 12.0
+- GCC >= 10.1
 
 ## ROADMAP
 
