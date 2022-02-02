@@ -51,11 +51,11 @@ void run(double some_param) {
 }
 ```
 
-Make an instance of `Chooser` class using macro `FUNCTION_CHOOSER` that requires: the template function and *number of states* for each template parameter:
+Make an instance of `Chooser` class that requires: the template function and *number of states* for each template parameter:
 
 ```cpp
 SpeciaLUT::Chooser<TABULATE(run), 2, 3> test;
-// or using a macro:
+// or by using a macro:
 CHOOSER(run, 2, 3) test;
 ```
 
@@ -69,16 +69,20 @@ There is a construct for CUDA kernels as well (see `main.cpp` for an example), w
 
 ```cpp
 SpeciaLUT::CudaChooser<TABULATE(some_cuda_kernel), 2, 3> test;
-// or using a macro:
+// or by using a macro:
 CUDA_CHOOSER(some_cuda_kernel, 2, 3) test;
 ```
 
-## TESTED ON
+## Be aware of ...
+
+slow compilation of large functions. This thing compiles all possible specializations. E.g. if you have 3 parameters with 3 states, it will compile 3^3 = 27 functions.
+
+## Tested on
 
 - Clang >= 12.0
 - GCC >= 10.1
 
-## ROADMAP
+## Roadmap
 
 - CXX functions (DONE)
 - CUDA functions (TESTING)
