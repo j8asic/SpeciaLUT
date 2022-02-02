@@ -15,7 +15,7 @@ Therefore, the safest thing is that the non-used parts of the code are not even 
 
 ## How to use it
 
-**Requirements**: C++17 compiler.
+**Requirements**: C++20 compiler.
 
 **Test**: Run CMake or open the project in an IDE.
 
@@ -29,35 +29,32 @@ Include the library:
 #include "specialut.hpp"
 ```
 
-Make a struct with a static function named `run`:
+A function `run` has both compile-time and run-time parameters:
 
 ```cpp
-struct Test
-{
-    template<bool condition, int state>
-    static void run(double some_param) {
+template<bool condition, int state>
+void run(double some_param) {
 
-        while (loop_condition) {
+    while (loop_condition) {
 
-            if constexpr (condition) {
-                /* ... */
-            } else {
-                /* ... */
-            }
-
-            if constexpr (state == SOME_ENUM) {
-                /* ... */
-            }
+        if constexpr (condition) {
+            /* ... */
+        } else {
+            /* ... */
         }
 
+        if constexpr (state == SOME_ENUM) {
+            /* ... */
+        }
     }
-};
+
+}
 ```
 
-Make an instance of `Chooser` class, with template parameters that specify: the *struct* containing a template `run` function, and *number of states* for each template parameter:
+Make an instance of `Chooser` class using macro `FUNCTION_CHOOSER` that requires: the template function and *number of states* for each template parameter:
 
 ```cpp
-SpeciaLUT::Chooser<Test, 2, 3> test;
+FUNCTION_CHOOSER(run, 2, 3) test;
 ```
 
 Find the optimal function based on the immutable run-time conditions (first brackets), pass other parameters and  execute the function (second brackets).
@@ -66,7 +63,9 @@ Find the optimal function based on the immutable run-time conditions (first brac
 test(runtime_bool, int_state)(double_parameter);
 ```
 
-## TODO
+## ROADMAP
 
-- CUDA functions
-- HIP functions
+- CXX functions (DONE)
+- CUDA functions (TESTING)
+- HIP functions (maybe)
+- C++17 workarounds (maybe)
