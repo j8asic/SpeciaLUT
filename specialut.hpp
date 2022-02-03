@@ -80,8 +80,8 @@ public:
     template<typename... Indices>
     auto operator()(Indices... indices) const -> FnSignature const&
     {
-        static_assert(sizeof...(indices) == sizeof...(NS), "Template called with inappropriate number of arguments.");
-        return *lut_.at(detail::lut_index<sizeof...(NS)>({ NS... }, { indices... }));
+        static_assert(sizeof...(indices) == NP, "Template called with inappropriate number of arguments.");
+        return *lut_.at(detail::lut_index<NP>({ NS... }, { indices... }));
     }
 };
 
@@ -105,11 +105,11 @@ template<auto PtrGetter, std::size_t... NS>
 class CudaKernel
 {
     using FnSignature = typename detail::Signature<PtrGetter.template operator()<(NS * 0)...>()>::value;
-    FnSignature* fn_ = nullptr;
+    FnSignature const& fn_;
     CudaKernelExecution exec_{};
 
 public:
-    CudaKernel(FnSignature* fn, CudaKernelExecution const& exec)
+    CudaKernel(FnSignature const& fn, CudaKernelExecution const& exec)
         : fn_(fn)
         , exec_(exec)
     { }
@@ -133,9 +133,6 @@ public:
     template<typename... Args>
     auto launch(Args&&... args) const -> cudaError_t
     {
-        if (!fn_) {
-            return cudaErrorUnknown;
-        }
         // convert parameters pack to array to pass all data to the kernel
         auto args_ptrs = std::array<void*, sizeof...(args)>({ &args... });
         // enqueue CUDA kernel with the specific function pointer, execution parameters and forwarded run-time arguments
@@ -179,8 +176,7 @@ public:
     template<typename... Indices>
     auto operator()(Indices... indices) const -> CudaKernel<PtrGetter, NS...>
     {
-        static_assert(sizeof...(indices) == sizeof...(NS), "Template called with inappropriate number of arguments.");
-        return { this->lut_.at(detail::lut_index<sizeof...(NS)>({ NS... }, { indices... })), exec_ };
+        return { Chooser<PtrGetter, NS...>::operator()(indices...), exec_ };
     }
 
 };
