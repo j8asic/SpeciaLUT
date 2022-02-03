@@ -73,6 +73,9 @@ SpeciaLUT::CudaChooser<TABULATE(some_cuda_kernel), 2, 3> test;
 CUDA_CHOOSER(some_cuda_kernel, 2, 3) test;
 ```
 
+[Try online in Compiler Explorer](https://godbolt.org/z/e1776n4xo)
+
+
 ## Be aware of ...
 
 slow compilation of large functions. This thing compiles all possible specializations. E.g. if you have 3 parameters with 3 states, it will compile 3^3 = 27 functions.
