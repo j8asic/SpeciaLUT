@@ -55,8 +55,6 @@ Make an instance of `Chooser` class that requires: the template function and *nu
 
 ```cpp
 SpeciaLUT::Chooser<TABULATE(run), 2, 3> test;
-// or by using a macro:
-CHOOSER(run, 2, 3) test;
 ```
 
 Find the optimal function based on the run-time conditions (first brackets), pass other parameters and execute the function (second brackets).
@@ -69,8 +67,6 @@ There is a construct for CUDA kernels as well (see `main.cpp` for an example), w
 
 ```cpp
 SpeciaLUT::CudaChooser<TABULATE(some_cuda_kernel), 2, 3> test;
-// or by using a macro:
-CUDA_CHOOSER(some_cuda_kernel, 2, 3) test;
 ```
 
 [Try online in Compiler Explorer](https://godbolt.org/z/e1776n4xo)
@@ -87,7 +83,13 @@ slow compilation of large functions. This thing compiles all possible specializa
 
 ## Roadmap
 
-- CXX functions (DONE)
-- CUDA functions (TESTING)
-- HIP functions (maybe)
+- C++ non-member functions (DONE)
+- C++ member functions (DONE)
+- CUDA kernels (DONE)
+- HIP kernels (maybe)
 - C++17 workarounds (maybe)
+
+## License
+
+BSD 2-Clause License
+Copyright (c) 2022, Josip Basic
