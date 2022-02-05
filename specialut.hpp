@@ -12,11 +12,19 @@ namespace detail {
 
     template<auto F>
     struct Signature;
+
     /// Extract the function signature
     template<typename R, typename... A, R (*F)(A...)>
     struct Signature<F>
     {
-        using value = R(A...);
+        using value = R (*)(A...);
+    };
+
+    /// Extract the member function signature
+    template<class C, typename R, typename... A, R (C::*F)(A...)>
+    struct Signature<F>
+    {
+        using value = R (C::*)(A...);
     };
 
     /// Calculate flattened index in the array from LUT states count and current states
@@ -52,12 +60,12 @@ protected:
     static constexpr std::size_t NP = sizeof...(NS); // number of compile-time parameters
     static constexpr std::size_t NL = (NS * ...); // total number of function pointers
 
-    using FnSignature = typename detail::Signature<PtrGetter.template operator()<(NS * 0)...>()>::value;
-    using FnLUT = std::array<FnSignature*, NL>;
+    using FnPtr = typename detail::Signature<PtrGetter.template operator()<(NS * 0)...>()>::value;
+    using FnLUT = std::array<FnPtr, NL>;
 
     /// Get the function pointer from flattened index
     template<int i, std::size_t... I>
-    static constexpr auto fn_ptr(const std::index_sequence<I...> /*unused*/) -> FnSignature*
+    static constexpr auto fn_ptr(const std::index_sequence<I...> /*unused*/) -> FnPtr
     {
         return PtrGetter.template operator()<detail::unflatten<NP>(i, I, { NS... })...>();
     }
@@ -78,16 +86,15 @@ public:
 
     /// Get the specialized function, deduced from the given runtime parameters
     template<typename... Indices>
-    auto operator()(Indices... indices) const -> FnSignature const&
+    auto operator()(Indices... indices) const -> FnPtr
     {
         static_assert(sizeof...(indices) == NP, "Template called with inappropriate number of arguments.");
-        return *lut_.at(detail::lut_index<NP>({ NS... }, { indices... }));
+        return lut_.at(detail::lut_index<NP>({ NS... }, { indices... }));
     }
 };
 
-#define TABULATE(FnName) []<int... args>() constexpr->auto { return &FnName<args...>; }
-#define CHOOSER(FnName, ...) SpeciaLUT::Chooser<TABULATE(FnName), __VA_ARGS__>
-
+#define TABULATE(FnName)                                                                                               \
+    []<int... args>() constexpr->auto { return &FnName<args...>; }
 
 #if __has_include(<cuda_runtime.h>)
 
@@ -104,12 +111,12 @@ struct CudaKernelExecution
 template<auto PtrGetter, std::size_t... NS>
 class CudaKernel
 {
-    using FnSignature = typename detail::Signature<PtrGetter.template operator()<(NS * 0)...>()>::value;
-    FnSignature const& fn_;
+    using FnPtr = typename detail::Signature<PtrGetter.template operator()<(NS * 0)...>()>::value;
+    FnPtr const fn_ = nullptr;
     CudaKernelExecution exec_{};
 
 public:
-    CudaKernel(FnSignature const& fn, CudaKernelExecution const& exec)
+    CudaKernel(FnPtr const fn, CudaKernelExecution const& exec)
         : fn_(fn)
         , exec_(exec)
     { }
@@ -133,6 +140,9 @@ public:
     template<typename... Args>
     auto launch(Args&&... args) const -> cudaError_t
     {
+        if (!fn_) {
+            return ::cudaErrorUnknown;
+        }
         // convert parameters pack to array to pass all data to the kernel
         auto args_ptrs = std::array<void*, sizeof...(args)>({ &args... });
         // enqueue CUDA kernel with the specific function pointer, execution parameters and forwarded run-time arguments
@@ -178,11 +188,8 @@ public:
     {
         return { Chooser<PtrGetter, NS...>::operator()(indices...), exec_ };
     }
-
 };
-
-#    define CUDA_CHOOSER(KernelName, ...) SpeciaLUT::CudaChooser<TABULATE(KernelName), __VA_ARGS__>
 
 #endif // end CUDA stuff
 
-}
+} // end SpeciaLUT namespace
