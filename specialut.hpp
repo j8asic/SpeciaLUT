@@ -104,10 +104,10 @@ public:
 /// Kernel execution parameters
 struct CudaKernelExecution
 {
-    dim3 grid_dim_{};
-    dim3 block_dim_{};
-    size_t shmem_bytes_ = 0;
-    cudaStream_t stream_ = nullptr;
+    dim3 grid_dim{};
+    dim3 block_dim{};
+    size_t shmem_bytes = 0;
+    cudaStream_t stream = nullptr;
 };
 
 /// Simple wrapper around chosen specialized CUDA kernel
@@ -149,8 +149,8 @@ public:
         // convert parameters pack to array to pass all data to the kernel
         auto args_ptrs = std::array<void*, sizeof...(args)>({ &args... });
         // enqueue CUDA kernel with the specific function pointer, execution parameters and forwarded run-time arguments
-        return cudaLaunchKernel(reinterpret_cast<const void*>(fn_), exec_.grid_dim_, exec_.block_dim_, args_ptrs.data(),
-                                exec_.shmem_bytes_, exec_.stream_);
+        return cudaLaunchKernel(reinterpret_cast<const void*>(fn_), exec_.grid_dim, exec_.block_dim, args_ptrs.data(),
+                                exec_.shmem_bytes, exec_.stream);
     }
 
     /// See: launch
