@@ -69,7 +69,7 @@ There is a construct for CUDA kernels as well (see `main.cpp` for an example), w
 SpeciaLUT::CudaChooser<TABULATE(some_cuda_kernel), 2, 3> test;
 ```
 
-[Try online in Compiler Explorer](https://godbolt.org/z/e1776n4xo)
+[Try online in Compiler Explorer](https://godbolt.org/z/Gzc87hPG6)
 
 
 ## Be aware of ...
@@ -78,8 +78,10 @@ slow compilation of large functions. This thing compiles all possible specializa
 
 ## Tested on
 
-- Clang >= 12.0
+- Clang >= 13.0
+- Clang 12 requires that `auto table = TABULATE(run)` is done, and `table` passed to `Chooser`
 - GCC >= 10.1
+- GCC 9.4 requires `-std=c++2a` instead of `-std=c++20`
 
 ## Roadmap
 
