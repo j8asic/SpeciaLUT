@@ -55,11 +55,13 @@ namespace detail {
 }
 
 /// Runtime choosing of specialized template functions
-template<auto PtrGetter, std::size_t... NS>
+template<class PtrGetterStruct, std::size_t... NS>
 class Chooser
 {
 
-protected:
+private:
+
+    static constexpr auto PtrGetter = PtrGetterStruct();
     static constexpr std::size_t NP = sizeof...(NS); // number of compile-time parameters
     static constexpr std::size_t NL = (NS * ...); // total number of function pointers
 
@@ -96,8 +98,19 @@ public:
     }
 };
 
-#define TABULATE(FnName)                                                                                               \
-    []<int... args>() constexpr->auto { return &FnName<args...>; }
+#if __cplusplus >= 201707
+#    define TABULATE(FnName) decltype([]<int... args>() constexpr->auto { return &FnName<args...>; })
+#else
+#    define TABULATE(FnName)                                                                                           \
+        struct                                                                                                         \
+        {                                                                                                              \
+            template<int... args>                                                                                      \
+            constexpr auto operator()() const -> typename SpeciaLUT::detail::Signature<&FnName<args...>>::value        \
+            {                                                                                                          \
+                return &FnName<args...>;                                                                               \
+            }                                                                                                          \
+        }
+#endif
 
 #if __has_include(<cuda_runtime.h>)
 
@@ -111,9 +124,10 @@ struct CudaKernelExecution
 };
 
 /// Simple wrapper around chosen specialized CUDA kernel
-template<auto PtrGetter, std::size_t... NS>
+template<class PtrGetterStruct, std::size_t... NS>
 class CudaKernel
 {
+    static constexpr auto PtrGetter = PtrGetterStruct();
     using FnPtr = typename detail::Signature<PtrGetter.template operator()<(NS * 0)...>()>::value;
     FnPtr const fn_ = nullptr;
     CudaKernelExecution exec_{};
@@ -162,8 +176,8 @@ public:
 };
 
 /// Runtime choosing of specialized template CUDA kernels
-template<auto PtrGetter, std::size_t... NS>
-class CudaChooser : public Chooser<PtrGetter, NS...>
+template<class PtrGetterStruct, std::size_t... NS>
+class CudaChooser : public Chooser<PtrGetterStruct, NS...>
 {
     CudaKernelExecution exec_{};
 
@@ -187,9 +201,9 @@ public:
 
     /// Get the specialized kernel pointer, deduced from the given runtime parameters
     template<typename... Indices>
-    auto operator()(Indices... indices) const -> CudaKernel<PtrGetter, NS...>
+    auto operator()(Indices... indices) const -> CudaKernel<PtrGetterStruct, NS...>
     {
-        return { Chooser<PtrGetter, NS...>::operator()(indices...), exec_ };
+        return { Chooser<PtrGetterStruct, NS...>::operator()(indices...), exec_ };
     }
 };
 
