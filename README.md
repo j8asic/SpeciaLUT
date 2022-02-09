@@ -15,7 +15,7 @@ Therefore, the safest thing is that the non-used parts of the code are not even 
 
 ## How to use it
 
-**Requirements**: C++20 compiler (enabled with `-std=c++20`)
+**Requirements**: C++17 compiler (enabled with `-std=c++17`)
 
 **Test**: Run CMake as usual, or open the project in an IDE.
 
@@ -54,7 +54,8 @@ void run(double some_param) {
 Make an instance of `Chooser` class that requires: the template function and *number of states* for each template parameter:
 
 ```cpp
-SpeciaLUT::Chooser<TABULATE(run), 2, 3> test;
+using table = TABULATE(run);
+SpeciaLUT::Chooser<table, 2, 3> test;
 ```
 
 Find the optimal function based on the run-time conditions (first brackets), pass other parameters and execute the function (second brackets).
@@ -66,10 +67,11 @@ test(runtime_bool, int_state)(double_parameter);
 There is a construct for CUDA kernels as well (see `main.cpp` for an example), which is used as:
 
 ```cpp
-SpeciaLUT::CudaChooser<TABULATE(some_cuda_kernel), 2, 3> test;
+using table = TABULATE(some_cuda_kernel);
+SpeciaLUT::CudaChooser<table, 2, 3> test;
 ```
 
-[Try online in Compiler Explorer](https://godbolt.org/z/Gzc87hPG6)
+[Try online in Compiler Explorer](https://godbolt.org/z/hMq4KzYET)
 
 
 ## Be aware of ...
@@ -78,10 +80,8 @@ slow compilation of large functions. This thing compiles all possible specializa
 
 ## Tested on
 
-- Clang >= 13.0
-- Clang 12 requires that `auto table = TABULATE(run)` is done, and `table` passed to `Chooser`
-- GCC >= 10.1
-- GCC 9.4 requires `-std=c++2a` instead of `-std=c++20`
+- Clang >= 5.0
+- GCC >= 8.1
 
 ## Roadmap
 
@@ -89,7 +89,7 @@ slow compilation of large functions. This thing compiles all possible specializa
 - C++ member functions (DONE)
 - CUDA kernels (DONE)
 - HIP kernels (maybe)
-- C++17 workarounds (maybe)
+- C++17 workarounds (DONE)
 
 ## License
 
