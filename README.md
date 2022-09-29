@@ -87,9 +87,9 @@ slow compilation of large functions. This thing compiles all possible specializa
 
 - C++ non-member functions (DONE)
 - C++ member functions (DONE)
+- C++17 workarounds (DONE, checkout branch `cxx17`)
 - CUDA kernels (DONE)
 - HIP kernels (maybe)
-- C++17 workarounds (maybe)
 
 ## License
 
