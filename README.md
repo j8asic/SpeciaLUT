@@ -82,6 +82,7 @@ slow compilation of large functions. This thing compiles all possible specializa
 - Clang 12 requires that `auto table = TABULATE(run)` is done, and `table` passed to `Chooser`
 - GCC >= 10.1
 - GCC 9.4 requires `-std=c++2a` instead of `-std=c++20`
+- MSVC >= 19.30 requires that `constexpr auto table = TABULATE(run)` is done, and `table` passed to `Chooser`
 
 ## Roadmap
 
