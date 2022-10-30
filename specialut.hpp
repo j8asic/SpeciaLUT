@@ -32,9 +32,9 @@ namespace detail {
 
     /// Calculate flattened index in the array from LUT states count and current states
     template<std::size_t NP>
-    auto lut_index(std::array<std::size_t, NP> const& n_states, std::array<int, NP> const& state) -> int
+    auto lut_index(std::array<std::size_t, NP> const& n_states, std::array<int, NP> const& state) -> std::size_t
     {
-        int offset = 0;
+        std::size_t offset = 0;
         for (int i = NP - 1; i >= 0; --i) {
             offset = state[i] + offset * n_states[i];
         }
