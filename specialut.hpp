@@ -1,40 +1,27 @@
+// SpeciaLUT: run-time choosing of compile-time functions
 // Copyright (c) 2022, Josip Basic <j8asic@gmail.com>
 // SPDX-License-Identifier: BSD-2-Clause
 
 #pragma once
 
 #include <array>
-#include <utility>
+#include <concepts>
 #if __has_include(<cuda_runtime.h>)
 #    include <cuda_runtime.h>
 #endif
 
 namespace SpeciaLUT {
 
+/// Define argument type for template states and LUT index calculation
+using arg_t = std::size_t;
+
 namespace detail {
 
-    template<auto F>
-    struct Signature;
-
-    /// Extract the function signature
-    template<typename R, typename... A, R (*F)(A...)>
-    struct Signature<F>
-    {
-        using value = R (*)(A...);
-    };
-
-    /// Extract the member function signature
-    template<class C, typename R, typename... A, R (C::*F)(A...)>
-    struct Signature<F>
-    {
-        using value = R (C::*)(A...);
-    };
-
     /// Calculate flattened index in the array from LUT states count and current states
-    template<std::size_t NP>
-    auto lut_index(std::array<std::size_t, NP> const& n_states, std::array<int, NP> const& state) -> std::size_t
+    template<arg_t NP>
+    auto flatten(std::array<arg_t, NP> const& n_states, std::array<arg_t, NP> const& state) -> arg_t
     {
-        std::size_t offset = 0;
+        arg_t offset = 0;
         for (int i = NP - 1; i >= 0; --i) {
             offset = state[i] + offset * n_states[i];
         }
@@ -42,9 +29,9 @@ namespace detail {
     }
 
     /// Get state index from the flattened index and LUT states count
-    template<std::size_t NP>
-    constexpr auto unflatten(std::size_t i, std::size_t target_param, std::array<std::size_t, NP> const n_states,
-                             std::size_t param = 0, std::size_t product = 1) -> std::size_t
+    template<arg_t NP>
+    constexpr auto unflatten(arg_t i, arg_t target_param, std::array<arg_t, NP> const n_states, arg_t param = 0,
+                             arg_t product = 1) -> arg_t
     {
         if (param == target_param) {
             return ((i / product) % n_states[param]);
@@ -52,53 +39,85 @@ namespace detail {
         return unflatten<NP>(i, target_param, n_states, param + 1, product * n_states[param]);
     }
 
-}
+    template<typename T>
+    concept not_integral = !std::is_integral_v<T>;
+
+    template<typename T>
+    concept convertible_to_arg_t = std::convertible_to<T, arg_t>;
+
+} // namespace detail
 
 /// Runtime choosing of specialized template functions
-template<auto PtrGetter, std::size_t... NS>
+template<auto Wrapper, arg_t... NS>
 class Chooser
 {
-
 protected:
-    static constexpr std::size_t NP = sizeof...(NS); // number of compile-time parameters
-    static constexpr std::size_t NL = (NS * ...); // total number of function pointers
+    static constexpr arg_t NP = sizeof...(NS); // number of compile-time parameters
+    static constexpr arg_t NL = (NS * ...); // total number of function pointers
 
-    using FnPtr = typename detail::Signature<PtrGetter.template operator()<(NS * 0)...>()>::value;
+    using FnPtr = decltype(Wrapper.template operator()<(NS * 0)...>());
     using FnLUT = std::array<FnPtr, NL>;
 
     /// Get the function pointer from flattened index
-    template<int i, std::size_t... I>
-    static constexpr auto fn_ptr(const std::index_sequence<I...> /*unused*/) -> FnPtr
+    template<arg_t i, arg_t... I>
+    static constexpr auto fn_ptr(const std::integer_sequence<arg_t, I...> /*unused*/) -> FnPtr
     {
-        return PtrGetter.template operator()<detail::unflatten<NP>(i, I, { NS... })...>();
+        return Wrapper.template operator()<detail::unflatten<NP>(i, I, { NS... })...>();
     }
 
-    /// Generate LUT from
-    template<std::size_t... I>
-    static constexpr auto make_lut(std::index_sequence<I...> /*unused*/) -> FnLUT
+    /// Generate the look-up table from all possible combinations
+    template<arg_t... I>
+    static constexpr auto make_lut(std::integer_sequence<arg_t, I...> /*unused*/) -> FnLUT
     {
-        return { (fn_ptr<I>(std::make_index_sequence<NP>{}))... };
+        return { (fn_ptr<I>(std::make_integer_sequence<arg_t, NP>{}))... };
     }
 
-    /// Compile-time-generated table of function pointers for all states combinations
-    static constexpr FnLUT lut_ = make_lut(std::make_index_sequence<NL>{});
+    /// Compile-time-generated table of function pointers, for all states combinations
+    static constexpr FnLUT table = make_lut(std::make_integer_sequence<arg_t, NL>{});
 
 public:
     Chooser() = default;
     ~Chooser() = default;
 
-    /// Get the specialized function, deduced from the given runtime parameters
-    template<typename... Indices>
-    auto operator()(Indices... indices) const -> FnPtr
+    /// Get the specialization function pointer, from the given runtime parameters
+    constexpr auto operator()(detail::convertible_to_arg_t auto... indices) const
     {
         static_assert(sizeof...(indices) == NP, "Template called with inappropriate number of arguments.");
-        return lut_.at(detail::lut_index<NP>({ NS... }, { indices... }));
+        return table.at(detail::flatten<NP>({ NS... }, { arg_t(indices)... }));
+    }
+
+    /// Get the specialization from the given runtime parameters, for an object instance
+    constexpr auto operator()(detail::not_integral auto& obj, detail::convertible_to_arg_t auto... indices) const
+    {
+        static_assert(sizeof...(indices) == NP, "Template called with inappropriate number of arguments.");
+
+        return [&obj, indices... ](auto&&... args) -> auto
+        {
+            return (obj.*table.at(detail::flatten<NP>({ NS... }, { arg_t(indices)... })))(
+                std::forward<decltype(args)>(args)...);
+        };
+    }
+
+    /// Get the specialization from the given runtime parameters, for an object instance
+    constexpr auto operator()(auto* ptr, detail::convertible_to_arg_t auto... indices) const
+    {
+        static_assert(sizeof...(indices) == NP, "Template called with inappropriate number of arguments.");
+
+        return [ ptr, indices... ](auto&&... args) -> auto
+        {
+            return (ptr->*table.at(detail::flatten<NP>({ NS... }, { arg_t(indices)... })))(
+                std::forward<decltype(args)>(args)...);
+        };
     }
 };
 
+// Macros for generating tables of function pointers
 #define TABULATE(FnName)                                                                                               \
-    []<int... args>() constexpr->auto { return &FnName<args...>; }
+    []<SpeciaLUT::arg_t... args>() constexpr->auto { return &FnName<args...>; }
+#define TABULATE_FUNCTOR(FnName) TABULATE(FnName::template operator())
+#define TABULATE_LAMBDA(FnName) TABULATE_FUNCTOR(decltype(FnName))
 
+// check if we need to declare CUDA stuff
 #if __has_include(<cuda_runtime.h>)
 
 /// Kernel execution parameters
@@ -111,10 +130,10 @@ struct CudaKernelExecution
 };
 
 /// Simple wrapper around chosen specialized CUDA kernel
-template<auto PtrGetter, std::size_t... NS>
+template<auto PtrGetter, arg_t... NS>
 class CudaKernel
 {
-    using FnPtr = typename detail::Signature<PtrGetter.template operator()<(NS * 0)...>()>::value;
+    using FnPtr = decltype(PtrGetter.template operator()<(NS * 0)...>());
     FnPtr const fn_ = nullptr;
     CudaKernelExecution exec_{};
 
@@ -162,7 +181,7 @@ public:
 };
 
 /// Runtime choosing of specialized template CUDA kernels
-template<auto PtrGetter, std::size_t... NS>
+template<auto PtrGetter, arg_t... NS>
 class CudaChooser : public Chooser<PtrGetter, NS...>
 {
     CudaKernelExecution exec_{};
@@ -186,8 +205,7 @@ public:
     }
 
     /// Get the specialized kernel pointer, deduced from the given runtime parameters
-    template<typename... Indices>
-    auto operator()(Indices... indices) const -> CudaKernel<PtrGetter, NS...>
+    constexpr auto operator()(detail::convertible_to_arg_t auto... indices) const -> CudaKernel<PtrGetter, NS...>
     {
         return { Chooser<PtrGetter, NS...>::operator()(indices...), exec_ };
     }
@@ -195,4 +213,4 @@ public:
 
 #endif // end CUDA stuff
 
-} // end SpeciaLUT namespace
+} // namespace SpeciaLUT

@@ -86,8 +86,9 @@ slow compilation of large functions. This thing compiles all possible specializa
 
 ## Roadmap
 
-- C++ non-member functions (DONE)
-- C++ member functions (DONE)
+- Non-member functions (DONE)
+- Member functions (DONE)
+- Lambdas and functors (DONE)
 - C++17 workarounds (DONE, checkout branch `cxx17`)
 - CUDA kernels (DONE)
 - HIP kernels (maybe)
