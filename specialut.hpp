@@ -117,6 +117,14 @@ public:
 #define TABULATE_FUNCTOR(FnName) TABULATE(FnName::template operator())
 #define TABULATE_LAMBDA(FnName) TABULATE_FUNCTOR(decltype(FnName))
 
+/// Lambdas are instanced objects so use it to directly choose templated function
+template<arg_t... NS>
+auto choose_lambda(auto lam, detail::convertible_to_arg_t auto... indices)
+{
+    static constexpr Chooser<TABULATE_LAMBDA(lam), NS...> chooser;
+    return chooser.operator()(lam, indices...);
+}
+
 // check if we need to declare CUDA stuff
 #if __has_include(<cuda_runtime.h>)
 
