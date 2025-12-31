@@ -18,8 +18,11 @@ if (DEFINED CUDAToolkit_VERSION)
 endif()
 
 add_executable(SpeciaLUT_test specialut.hpp main.cpp)
+add_executable(SpeciaLUT_benchmark specialut.hpp benchmark.cpp)
 
 if (DEFINED CUDAToolkit_VERSION)
     target_include_directories(SpeciaLUT_test SYSTEM PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
     target_link_libraries(SpeciaLUT_test PRIVATE CUDA::cudart_static)
+    target_include_directories(SpeciaLUT_benchmark SYSTEM PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
+    target_link_libraries(SpeciaLUT_benchmark PRIVATE CUDA::cudart_static)
 endif()

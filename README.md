@@ -1,11 +1,24 @@
 # SpeciaLUT
+
 Run-time choosing of template specializations using compile-time lookup-tables (LUT). Simply put: compile all possible states of a template function, but execute the optimal one at run-time.
 
-## Use cases
+## Ideal Use Case
 
-Heavy functions can have many branching scenarios inside loops. Some branches may be dependent on conditions that do not change during execution of the function. Branching prediction works good on CPUs, but in any case, conditions and jumping takes time. Moreover, GPUs do not use branching prediction. 
+SpeciaLUT is designed for **hot functions** with:
+- **Many iterations inside** the function (loops over large data)
+- **Multiple if/else or enum-based control flow** that creates branching
+- **Conditions that are loop-invariant** (set once before the function, used many times inside)
 
-Therefore, the safest thing is that the non-used parts of the code are not even there -- that the compiler deletes them. This is possible by introducing compile-time conditions, if the conditions are immutable during the function execution.
+The library pre-compiles all possible specializations and selects the right one at runtime via a lookup table. This eliminates branching overhead inside tight loops.
+
+**Where it is applicable:**
+- GPU kernels (CUDA/HIP) — avoids warp divergence
+- Large functions that can't be inlined
+- Code with many orthogonal boolean/enum flags
+
+**Where it is not applicable:**
+- Small functions that the compiler can inline and optimize
+- Conditions that vary per-iteration (use runtime branching instead)
 
 ## How it works
 
@@ -17,13 +30,9 @@ Therefore, the safest thing is that the non-used parts of the code are not even 
 
 **Requirements**: C++20 compiler (enabled with `-std=c++20`)
 
-**Test**: Run CMake as usual, or open the project in an IDE.
-
 **Set up**: Copy `specialut.hpp` into your project and include it.
 
 **Example**:
-
-Include the library:
 
 ```cpp
 #include "specialut.hpp"
@@ -54,27 +63,36 @@ void run(double some_param) {
 Make an instance of `Chooser` class that requires: the template function and *number of states* for each template parameter:
 
 ```cpp
-SpeciaLUT::Chooser<TABULATE(run), 2, 3> test;
+SpeciaLUT::Chooser<TABULATE(run), 2, 3> chooser;
 ```
 
-Find the optimal function based on the run-time conditions (first brackets), pass other parameters and execute the function (second brackets).
+Choose the specialization at runtime (first brackets), then call it with function arguments (second brackets):
 
 ```cpp
-test(runtime_bool, int_state)(double_parameter);
+chooser(runtime_bool, int_state)(double_parameter);
 ```
 
-There is a construct for CUDA kernels as well (see `main.cpp` for an example), which is used as:
+For CUDA/HIP kernels:
 
 ```cpp
-SpeciaLUT::CudaChooser<TABULATE(some_cuda_kernel), 2, 3> test;
+SpeciaLUT::CudaChooser<TABULATE(some_kernel), 2, 3> kernel;
+kernel.prepare(grid_dim, block_dim);
+kernel(runtime_bool, int_state)(kernel_args);
 ```
 
 [Try online in Compiler Explorer](https://godbolt.org/z/Gzc87hPG6)
 
+## Files
+
+| File | Description |
+|------|-------------|
+| `specialut.hpp` | Header-only library — copy this into your project |
+| `main.cpp` | Usage examples: free functions, member functions, lambdas, functors, CUDA |
+| `benchmark.cpp` | Performance comparison: LUT dispatch vs runtime branching |
 
 ## Be aware of ...
 
-slow compilation of large functions. This thing compiles all possible specializations. E.g. if you have 3 parameters with 3 states, it will compile 3^3 = 27 functions.
+Slow compilation of large functions. This compiles all possible specializations. E.g. if you have 4 boolean parameters, it will compile 2^4 = 16 functions.
 
 ## Tested on
 
@@ -98,3 +116,4 @@ slow compilation of large functions. This thing compiles all possible specializa
 
 BSD 2-Clause License
 Copyright (c) 2022, Josip Basic
+
