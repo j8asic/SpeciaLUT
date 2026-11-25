@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    # MSVC is known to need the wrapper lambda in a named constant (see the
+    # README); until the tests are written that way, its job only informs
+    continue-on-error: ${{ matrix.experimental || false }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # the oldest compilers the README promises
+          - { name: "GCC 10, C++20", os: ubuntu-22.04, cxx: g++-10, std: 20 }
+          - { name: "Clang 13, C++20", os: ubuntu-22.04, cxx: clang++-13, std: 20 }
+          # recent ones, with the C++23 static call operator
+          - { name: "GCC 14, C++23", os: ubuntu-24.04, cxx: g++-14, std: 23 }
+          - { name: "Clang 18, C++23", os: ubuntu-24.04, cxx: clang++-18, std: 23 }
+          - name: "Clang 18, sanitizers"
+            os: ubuntu-24.04
+            cxx: clang++-18
+            std: 20
+            options: -DSPECIALUT_SANITIZE=ON -DCMAKE_BUILD_TYPE=Debug
+          - { name: "MSVC, C++20", os: windows-latest, std: 20, experimental: true }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        env:
+          CXX: ${{ matrix.cxx }}
+        run: >
+          cmake -S . -B build
+          -DCMAKE_CXX_STANDARD=${{ matrix.std }}
+          -DSPECIALUT_CUDA=OFF
+          -DSPECIALUT_NATIVE=OFF
+          ${{ matrix.options }}
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
